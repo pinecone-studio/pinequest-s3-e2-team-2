@@ -14,7 +14,5 @@ const Page = () => {
         </Button>
       </Link>
     </div>
-  );
-};
-
-export default Page;
+  )
+}
