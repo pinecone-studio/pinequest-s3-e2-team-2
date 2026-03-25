@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ExamHeader, ExamProgressBar, ExamQA } from "./_components";
+import ProctoringGuard from "./_components/ProctoringGuard";
+import { ExamProvider, useExamState } from "./_hooks/use-exam-states";
 import { ExamProvider } from "./_hooks/use-exam-states";
 import { toast } from "sonner";
 
@@ -45,6 +47,9 @@ export const ExamContent = () => {
   };
 
   return (
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+      <ProctoringGuard />
+
     <div
       className="flex flex-col h-screen bg-gray-50 overflow-hidden"
       id="exam-area"
