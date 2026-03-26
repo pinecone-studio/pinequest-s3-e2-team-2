@@ -56,7 +56,7 @@ const DEFAULT_RUBRIC: RubricCriterion[] = [
   },
 ];
 
-export const STUDENTS_BY_CLASS: Record<string, Student[]> = {
+export const studentsByClass: Record<string, Student[]> = {
   cs101: [
     {
       id: "morgan-davis",
