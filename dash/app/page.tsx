@@ -1,6 +1,7 @@
 "use client";
 
 import DashboardPage from "./dashboard/page";
+import StudentsPage from "./students/page";
 
 const Page = () => {
   return (
@@ -9,6 +10,7 @@ const Page = () => {
         <h1 className="text-lg font-medium">Нүүр хэсэг</h1>
       </div> */}
       <DashboardPage />
+      
     </div>
   );
 };
