@@ -6,6 +6,9 @@ type CreateSubmissionAnswerArgs = {
   question_id: string;
   answer_id?: string;
   text_answer?: string;
+  is_correct?: boolean;
+  score?: number;
+  feedback?: string;
 };
 
 export const submissionAnswerMutations = {
@@ -17,11 +20,12 @@ export const submissionAnswerMutations = {
       .from("submission_answers")
       .insert([args])
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error(error.message);
     return data;
   },
+
   updateSubmissionAnswer: async (
     _: unknown,
     args: {
@@ -30,6 +34,9 @@ export const submissionAnswerMutations = {
       question_id?: string;
       answer_id?: string;
       text_answer?: string;
+      is_correct?: boolean;
+      score?: number;
+      feedback?: string;
     },
   ) => {
     const payload = pickDefined({
@@ -37,6 +44,9 @@ export const submissionAnswerMutations = {
       question_id: args.question_id,
       answer_id: args.answer_id,
       text_answer: args.text_answer,
+      is_correct: args.is_correct,
+      score: args.score,
+      feedback: args.feedback,
     });
 
     const { data, error } = await supabase

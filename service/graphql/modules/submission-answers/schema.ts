@@ -5,6 +5,9 @@ export const submissionAnswerTypeDefs = `#graphql
     question_id: String
     answer_id: String
     text_answer: String
+    is_correct: Boolean
+    score: Int
+    feedback: String
   }
 
   extend type Query {
@@ -18,13 +21,20 @@ export const submissionAnswerTypeDefs = `#graphql
       question_id: String!
       answer_id: String
       text_answer: String
+      is_correct: Boolean
+      score: Int
+      feedback: String
     ): SubmissionAnswer
+
     updateSubmissionAnswer(
       id: String!
       submission_id: String
       question_id: String
       answer_id: String
       text_answer: String
+      is_correct: Boolean
+      score: Int
+      feedback: String
     ): SubmissionAnswer
   }
 `;

@@ -1,9 +1,15 @@
 export const questionTypeDefs = `#graphql
+
+enum QuestionDifficulty {
+  easy
+  medium
+  hard
+}
   type Question {
     id: String
     text: String
     type: String
-    difficulty: String
+    difficulty: QuestionDifficulty
     category: String
     answers: [Answer]
   }
@@ -17,7 +23,7 @@ export const questionTypeDefs = `#graphql
     createQuestion(
       text: String!
       type: String!
-      difficulty: String
+      difficulty: QuestionDifficulty!
       category: String
     ): Question
 
@@ -25,7 +31,7 @@ export const questionTypeDefs = `#graphql
       id: String!
       text: String
       type: String
-      difficulty: String
+      difficulty: QuestionDifficulty
       category: String
     ): Question
 
