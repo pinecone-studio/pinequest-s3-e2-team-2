@@ -165,7 +165,7 @@ export function ActiveExams() {
 
           return {
             id: exam.id,
-            title: exam.title ?? "Untitled exam",
+            title: exam.title ?? "Шалгалтын нэр олдсонгүй",
             meta: `${courseCode}${timeRange ? ` · ${timeRange}` : ""}`,
             students,
             violations,
@@ -175,7 +175,7 @@ export function ActiveExams() {
         if (!cancelled) setActiveExams(dashboard as DashboardExam[]);
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Failed to load active exams");
+        setError(e instanceof Error ? e.message : "Шалгалтын мэдээлэл ачаалж чадсангүй");
         setActiveExams([]);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -211,7 +211,7 @@ export function ActiveExams() {
       </CardHeader>
       <CardContent className="px-5 pb-5 pt-4 flex flex-col gap-3">
         {isLoading ? (
-          <div className="text-[12px] text-[#8a9bb0] py-2">Loading...</div>
+          <div className="text-[12px] text-[#8a9bb0] py-2">Ачааллаж байна...</div>
         ) : activeExams.length === 0 ? (
           <div className="text-[12px] text-[#8a9bb0] py-2">
             Одоогоор идэвхтэй шалгалт алга байна
