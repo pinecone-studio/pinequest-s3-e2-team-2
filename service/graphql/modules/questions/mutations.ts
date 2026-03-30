@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 type CreateQuestionArgs = {
   text: string;
   type: string;
-  difficulty?: string;
+  difficulty?: "easy" | "medium" | "hard";
   category?: string;
 };
 
