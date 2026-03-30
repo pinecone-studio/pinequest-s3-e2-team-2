@@ -18,3 +18,15 @@ export interface Student {
   lastActive: string;
   examHistory: ExamHistory[];
 }
+export interface Student {
+  id: number;
+  name: string;
+  email: string;
+  course: string;
+  major: string; // ✅ ADD THIS
+  averageScore: number;
+  examsTaken: number;
+  trend: "up" | "down" | "stable";
+  lastActive: string;
+  examHistory: ExamHistory[];
+}
