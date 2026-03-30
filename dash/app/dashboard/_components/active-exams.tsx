@@ -172,7 +172,7 @@ export function ActiveExams() {
           };
         });
 
-        if (!cancelled) setActiveExams(dashboard);
+        if (!cancelled) setActiveExams(dashboard as DashboardExam[]);
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : "Failed to load active exams");
