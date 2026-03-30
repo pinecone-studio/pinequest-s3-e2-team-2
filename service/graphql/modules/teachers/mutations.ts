@@ -4,7 +4,7 @@ import { pickDefined } from "../../shared";
 export const teacherMutations = {
   createTeacher: async (_: unknown, args: { name: string; email: string }) => {
     const { data, error } = await supabase
-      .from("teacher")
+      .from("teachers")
       .insert([{ name: args.name, email: args.email }])
       .select()
       .single();
@@ -19,7 +19,7 @@ export const teacherMutations = {
     const payload = pickDefined({ name: args.name, email: args.email });
 
     const { data, error } = await supabase
-      .from("teacher")
+      .from("teachers")
       .update(payload)
       .eq("id", args.id)
       .select()
