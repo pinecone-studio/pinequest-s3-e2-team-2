@@ -76,7 +76,6 @@ const StudentTable = ({ students }: StudentTableProps) => {
             {students.map((s) => {
               const TrendIcon = trendMeta[s.trend].icon;
 
-              /* 🔥 CONDITION */
               const isMissing = s.examsTaken === 0;
               const isLow = s.averageScore < 70 && !isMissing;
 
@@ -208,33 +207,101 @@ const StudentTable = ({ students }: StudentTableProps) => {
         )}
       </div>
 
-      {/* MODAL */}
+      {/* 🔥 DETAIL MODAL */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          {selectedStudent && (
-            <>
-              <DialogTitle>{selectedStudent.name}</DialogTitle>
-              <DialogDescription>
-                {selectedStudent.email}
-              </DialogDescription>
+        <DialogContent className="max-w-xl space-y-4">
 
-              <div className="mt-4">
-                {selectedStudent.examsTaken === 0 ? (
-                  <div className="text-red-500">
-                    ⚠ Шалгалт өгөөгүй
-                  </div>
-                ) : selectedStudent.averageScore < 60 ? (
-                  <div className="text-yellow-600">
+          <DialogTitle>
+            {selectedStudent?.name}
+          </DialogTitle>
+
+          <DialogDescription>
+            {selectedStudent?.email}
+          </DialogDescription>
+
+          {selectedStudent && (
+            <div className="space-y-4">
+
+              {/* INFO */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500">Курс</p>
+                  <p className="font-medium">{selectedStudent.course}</p>
+                </div>
+
+                <div>
+                  <p className="text-gray-500">Мэргэжил</p>
+                  <p className="font-medium">{selectedStudent.major}</p>
+                </div>
+
+                <div>
+                  <p className="text-gray-500">Дундаж</p>
+                  <p className="font-medium">
+                    {selectedStudent.examsTaken === 0
+                      ? "—"
+                      : `${selectedStudent.averageScore}%`}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-gray-500">Шалгалт</p>
+                  <p className="font-medium">
+                    {selectedStudent.examsTaken}
+                  </p>
+                </div>
+              </div>
+
+              {/* STATUS */}
+              {selectedStudent.examsTaken === 0 && (
+                <div className="p-3 bg-red-50 text-red-600 rounded">
+                  ⚠ Шалгалт өгөөгүй
+                </div>
+              )}
+
+              {selectedStudent.averageScore < 60 &&
+                selectedStudent.examsTaken > 0 && (
+                  <div className="p-3 bg-yellow-50 text-yellow-700 rounded">
                     ⚠ Тэнцээгүй
                   </div>
-                ) : (
-                  <div>
-                    Дундаж: {selectedStudent.averageScore}%
-                  </div>
                 )}
-              </div>
-            </>
+
+              {/* EXAM HISTORY */}
+              {selectedStudent.examHistory.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">
+                    Шалгалтын түүх
+                  </p>
+
+                  <div className="space-y-2">
+                    {selectedStudent.examHistory.map((exam) => (
+                      <div
+                        key={exam.id}
+                        className="flex justify-between border rounded p-2 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{exam.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {exam.date}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            {exam.score}/{exam.maxScore}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {exam.grade}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
           )}
+
         </DialogContent>
       </Dialog>
     </>
