@@ -466,13 +466,13 @@ export default function UpcomingExams() {
                         {exam.title}
                       </h3>
 
-                      <p className="mt-1 text-[11px] text-slate-500">
+                      <p className="mt-1 text-[12px] text-slate-500">
                         {getExamDurationLabel(exam.duration)}
                       </p>
                     </div>
 
                     <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-gray-500 text-[10px]">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-gray-500 text-[11px]">
                         {exam.hasKnownStartTime ? (
                           <>
                             <div className="flex items-center gap-0.5 whitespace-nowrap">
@@ -496,7 +496,7 @@ export default function UpcomingExams() {
                         <Button
                           type="button"
                           onClick={() => handleOpenWarning(exam)}
-                          className="hover:cursor-pointer flex shrink-0 rounded-md items-center gap-0.5 bg-[#006d77] px-2 py-0 h-6 text-[11px]"
+                          className="hover:cursor-pointer flex shrink-0 rounded-md items-center gap-0.5 bg-[#006d77] px-2 py-0 h-6 text-[12px]"
                         >
                           Шалгалт өгөх <ChevronRight className="w-1.5 h-1.5" />
                         </Button>
@@ -507,7 +507,7 @@ export default function UpcomingExams() {
                               <Button
                                 type="button"
                                 disabled
-                                className="flex h-6 shrink-0 items-center gap-0.5 rounded-md bg-[#006d77] px-2 py-0 text-[11px] text-white/90 hover:cursor-not-allowed"
+                                className="flex h-7 shrink-0 items-center gap-0.5 rounded-md bg-[#006d77] px-3 py-0 text-[12px] text-white/90 hover:cursor-not-allowed"
                               >
                                 Шалгалт өгөх{" "}
                                 <ChevronRight className="h-1.5 w-1.5" />
