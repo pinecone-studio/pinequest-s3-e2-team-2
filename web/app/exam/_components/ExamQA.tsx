@@ -3,6 +3,10 @@ import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import { useExamState } from "../_hooks/use-exam-states";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import {
+  EXAM_WARNING_CODES,
+  useExamWarningTracker,
+} from "../_hooks/use-exam-warning-tracker";
 
 export const ExamQA = () => {
   const {
@@ -15,9 +19,12 @@ export const ExamQA = () => {
     setAnswers,
     setFlagged,
   } = useExamState();
+  const { recordWarning } = useExamWarningTracker();
 
   const answer = answers[currentId] ?? null;
   const isFlagged = flagged.includes(currentId);
+  const isFirstQuestion = currentId === 1;
+  const isLastQuestion = currentId === totalQuestions;
   const wordCount =
     answer === null ? 0 : answer.toString().trim().split(/\s+/).length;
 
@@ -56,17 +63,20 @@ export const ExamQA = () => {
       e.key === "PrintScreen" ||
       e.key === "F12"
     ) {
+      recordWarning(EXAM_WARNING_CODES.keyboardShortcut);
       e.preventDefault();
       toast.error(`Товчлол ашиглах хориотой: ${e.key}`);
     }
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    recordWarning(EXAM_WARNING_CODES.contextMenu);
     e.preventDefault();
     toast.error("Хулганы баруун товч ашиглах хориотой!");
   };
 
   const handleCopyPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    recordWarning(EXAM_WARNING_CODES.clipboardBlocked);
     e.preventDefault();
     toast.error("Хуулах/Буулгах үйлдэл хориотой!");
   };
@@ -127,18 +137,18 @@ export const ExamQA = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-8 font-medium">
+        <div className="mt-8 grid grid-cols-3 items-center font-medium">
           <button
             onClick={handleBack}
-            disabled={currentQuestion.id === 1}
-            className="flex items-center gap-1 text-sm text-gray-500 transition hover:text-[#006d77] disabled:cursor-not-allowed disabled:opacity-30"
+            disabled={isFirstQuestion}
+            className="flex items-center justify-self-start gap-1 text-sm text-gray-500 transition hover:text-[#006d77] disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronLeft size={16} /> Буцах
           </button>
 
           <button
             onClick={handleFlag}
-            className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg border transition ${
+            className={`flex items-center justify-self-center gap-2 rounded-lg border px-4 py-2 text-sm transition ${
               isFlagged
                 ? "border-yellow-400 text-yellow-600 bg-yellow-50"
                 : "border-gray-200 text-gray-500 hover:border-yellow-300"
@@ -147,13 +157,14 @@ export const ExamQA = () => {
             <Flag size={16} /> {isFlagged ? "Тэмдэглэсэн" : "Тэмдэглэх"}
           </button>
 
-          <button
-            onClick={handleNext}
-            disabled={currentQuestion.id === totalQuestions}
-            className="flex items-center gap-2 rounded-lg bg-[#006d77] px-5 py-2 text-sm text-white transition hover:bg-[#00565e] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Цааш <ChevronRight size={16} />
-          </button>
+          {isLastQuestion ? null : (
+            <button
+              onClick={handleNext}
+              className="flex items-center justify-self-end gap-2 rounded-lg bg-[#006d77] px-5 py-2 text-sm text-white transition hover:bg-[#00565e]"
+            >
+              Цааш <ChevronRight size={16} />
+            </button>
+          )}
         </div>
       </main>
     </div>
