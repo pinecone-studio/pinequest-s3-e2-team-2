@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 
 import { useStudents } from "./_hooks/useStudents";
 import StudentTable from "./_components/StudentTable";
@@ -70,6 +70,8 @@ export default function Page() {
 
   const [open, setOpen] = useState<boolean>(false);
   const analytics = getAnalytics(filteredItems);
+  const activeFilterCount =
+    courseFilter.length + classFilter.length + majorFilter.length;
 
   useEffect(() => {
     const course = searchParams.get("course");
@@ -130,9 +132,15 @@ export default function Page() {
 
           <button
             onClick={() => setOpen(true)}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 bg-slate-900 text-white hover:bg-slate-800 transition"
           >
-            Филтэр
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-semibold">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
