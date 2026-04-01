@@ -20,4 +20,6 @@ export type ExamMeta = {
   title: string;
   subtitle?: string;
   durationSeconds: number;
+  startTime?: string | null;
+  endTime?: string | null;
 };

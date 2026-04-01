@@ -7,6 +7,11 @@ import {
   useState,
 } from "react";
 import { ExamMeta, ExamQuestion } from "../exam-types";
+import { getScheduledEndsAtMs } from "../exam-schedule";
+import {
+  getExamWarningSessionStorageKey,
+  getExamWarningStateStorageKey,
+} from "../exam-warning-storage";
 
 type SavedExamState = {
   currentId: number;
@@ -64,7 +69,11 @@ const useExamStateInternal = ({
   exam: ExamMeta;
   questions: ExamQuestion[];
 }) => {
-  const initialState = getInitialExamState(exam.id);
+  const examId = exam.id;
+  const durationSeconds = exam.durationSeconds;
+  const startTime = exam.startTime;
+  const endTime = exam.endTime;
+  const initialState = getInitialExamState(examId);
   const [currentId, setCurrentId] = useState<number>(initialState.currentId);
   const [answers, setAnswers] = useState<Record<number, string | null>>(
     initialState.answers,
@@ -72,14 +81,27 @@ const useExamStateInternal = ({
   const [flagged, setFlagged] = useState<number[]>(initialState.flagged);
 
   useEffect(() => {
-    const endsAtStorageKey = getExamEndsAtStorageKey(exam.id);
+    const endsAtStorageKey = getExamEndsAtStorageKey(examId);
     const savedEndsAt = localStorage.getItem(endsAtStorageKey);
+    const scheduledEndsAtMs = getScheduledEndsAtMs({
+      durationSeconds,
+      startTime,
+      endTime,
+    });
+
+    if (scheduledEndsAtMs !== null) {
+      if (savedEndsAt !== scheduledEndsAtMs.toString()) {
+        localStorage.setItem(endsAtStorageKey, scheduledEndsAtMs.toString());
+      }
+
+      return;
+    }
 
     if (!savedEndsAt) {
-      const endsAt = Date.now() + exam.durationSeconds * 1000;
+      const endsAt = Date.now() + durationSeconds * 1000;
       localStorage.setItem(endsAtStorageKey, endsAt.toString());
     }
-  }, [exam.durationSeconds, exam.id]);
+  }, [durationSeconds, endTime, examId, startTime]);
 
   useEffect(() => {
     const payload: SavedExamState = {
@@ -89,10 +111,10 @@ const useExamStateInternal = ({
     };
 
     localStorage.setItem(
-      getExamDraftStorageKey(exam.id),
+      getExamDraftStorageKey(examId),
       JSON.stringify(payload),
     );
-  }, [answers, currentId, exam.id, flagged]);
+  }, [answers, currentId, examId, flagged]);
 
   const totalQuestions = questions.length;
   const safeCurrentId =
@@ -101,8 +123,10 @@ const useExamStateInternal = ({
   const answeredCount = Object.values(answers).filter((a) => a !== null).length;
 
   const clearSavedExam = () => {
-    localStorage.removeItem(getExamDraftStorageKey(exam.id));
-    localStorage.removeItem(getExamEndsAtStorageKey(exam.id));
+    localStorage.removeItem(getExamDraftStorageKey(examId));
+    localStorage.removeItem(getExamEndsAtStorageKey(examId));
+    localStorage.removeItem(getExamWarningSessionStorageKey(examId));
+    localStorage.removeItem(getExamWarningStateStorageKey(examId));
   };
 
   return {

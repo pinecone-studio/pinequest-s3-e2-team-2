@@ -176,28 +176,6 @@ const COMPLETED_EXAM_DETAIL_QUERY = `
   }
 `;
 
-const formatSubmittedAt = (value: string) => {
-  const submittedAt = new Date(value);
-
-  if (Number.isNaN(submittedAt.getTime())) {
-    return "Огноо тодорхойгүй";
-  }
-
-  const date = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(submittedAt);
-
-  const time = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(submittedAt);
-
-  return `${date} · ${time}`;
-};
-
 const formatSubmittedDateOnly = (value: string) => {
   const submittedAt = new Date(value);
 
@@ -590,7 +568,7 @@ const CompletedExams = () => {
             ) : null}
 
             {!loading && !error && completedExams.length === 0 ? (
-              <div className="rounded-3xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-500">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-500">
                 Одоогоор өгсөн шалгалт алга.
               </div>
             ) : null}
@@ -626,7 +604,7 @@ const CompletedExams = () => {
 
                         <div className="pt-1 text-xs text-gray-500 flex items-center gap-3">
                           <CalendarDays className="h-3 w-3" />
-                          <span>{formatSubmittedAt(exam.submittedAt)}</span>
+                          <span>{formatSubmittedDateOnly(exam.submittedAt)}</span>
                         </div>
                       </div>
                     </div>
@@ -666,7 +644,7 @@ const CompletedExams = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[calc(85vh-92px)] overflow-y-auto px-6 py-5">
+          <div className="no-scrollbar max-h-[calc(85vh-92px)] overflow-y-auto px-6 py-5">
             {selectedExam ? (
               <div className="space-y-5">
                 <div className="grid gap-3 md:grid-cols-4">

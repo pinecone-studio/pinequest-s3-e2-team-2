@@ -9,6 +9,8 @@ type ExamQueryResponse = {
     id: string;
     title: string;
     duration: number;
+    start_time: string | null;
+    end_time: string | null;
     course: {
       name: string;
       code: string;
@@ -49,6 +51,8 @@ const EXAM_PAGE_QUERY = `
       id
       title
       duration
+      start_time
+      end_time
       course {
         name
         code
@@ -174,6 +178,8 @@ const buildExamData = (data: ExamQueryResponse): LoadedExamData | null => {
       title: data.exam.title,
       subtitle: data.exam.course?.name ?? data.exam.course?.code ?? undefined,
       durationSeconds: (data.exam.duration ?? 0) * 60,
+      startTime: data.exam.start_time,
+      endTime: data.exam.end_time,
     },
     questions: examQuestions,
   };

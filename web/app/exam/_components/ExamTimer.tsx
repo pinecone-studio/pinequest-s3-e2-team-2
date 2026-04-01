@@ -1,22 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
-const getInitialTimeLeft = (
-  durationSeconds: number,
-  storageKey: string,
-) => {
+const getStoredEndsAtMs = (storageKey: string) => {
   if (typeof window === "undefined") {
-    return durationSeconds;
+    return null;
   }
 
   const savedEndsAt = localStorage.getItem(storageKey);
+  const parsedEndsAt = savedEndsAt ? Number(savedEndsAt) : NaN;
 
-  if (!savedEndsAt) {
-    return durationSeconds;
+  return Number.isFinite(parsedEndsAt) ? parsedEndsAt : null;
+};
+
+const getEffectiveEndsAtMs = (
+  durationSeconds: number,
+  storageKey: string,
+  scheduledEndsAtMs?: number | null,
+) => {
+  if (
+    typeof scheduledEndsAtMs === "number" &&
+    Number.isFinite(scheduledEndsAtMs)
+  ) {
+    return scheduledEndsAtMs;
   }
 
-  return Math.max(0, Math.ceil((Number(savedEndsAt) - Date.now()) / 1000));
+  const storedEndsAtMs = getStoredEndsAtMs(storageKey);
+
+  if (storedEndsAtMs !== null) {
+    return storedEndsAtMs;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return Date.now() + durationSeconds * 1000;
 };
 
 function formatTime(seconds: number) {
@@ -30,26 +49,47 @@ function formatTime(seconds: number) {
 const ExamTimer = ({
   durationSeconds = 4500,
   storageKey,
+  scheduledEndsAtMs,
 }: {
   durationSeconds?: number;
   storageKey: string;
+  scheduledEndsAtMs?: number | null;
 }) => {
-  const [timeLeft, setTimeLeft] = useState<number>(() =>
-    getInitialTimeLeft(durationSeconds, storageKey),
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const effectiveEndsAtMs = useMemo(
+    () => getEffectiveEndsAtMs(durationSeconds, storageKey, scheduledEndsAtMs),
+    [durationSeconds, scheduledEndsAtMs, storageKey],
   );
+  const timeLeft =
+    effectiveEndsAtMs === null
+      ? durationSeconds
+      : Math.max(0, Math.ceil((effectiveEndsAtMs - nowMs) / 1000));
 
   useEffect(() => {
-    const savedEndsAt = localStorage.getItem(storageKey);
-
-    if (!savedEndsAt) {
-      const endsAt = Date.now() + durationSeconds * 1000;
-      localStorage.setItem(storageKey, endsAt.toString());
+    if (
+      typeof scheduledEndsAtMs === "number" &&
+      Number.isFinite(scheduledEndsAtMs)
+    ) {
+      if (getStoredEndsAtMs(storageKey) !== scheduledEndsAtMs) {
+        localStorage.setItem(storageKey, scheduledEndsAtMs.toString());
+      }
+      return;
     }
-  }, [durationSeconds, storageKey]);
+
+    const storedEndsAtMs = getStoredEndsAtMs(storageKey);
+
+    if (storedEndsAtMs === null && effectiveEndsAtMs !== null) {
+      localStorage.setItem(storageKey, effectiveEndsAtMs.toString());
+    }
+  }, [effectiveEndsAtMs, scheduledEndsAtMs, storageKey]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
-    const interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
     return () => clearInterval(interval);
   }, [timeLeft]);
 

@@ -152,24 +152,21 @@ const getExamDurationLabel = (value: number | null | undefined) => {
 };
 
 const getExamEndsAt = (exam: SessionExamCard) => {
-  const explicitEnd = parseExamDate(exam.endsAt);
-
-  if (explicitEnd) {
-    return explicitEnd;
-  }
-
   const startsAt = parseExamDate(exam.startsAt);
 
-  if (!startsAt) {
-    return null;
-  }
-
   if (
+    startsAt &&
     typeof exam.duration === "number" &&
     !Number.isNaN(exam.duration) &&
     exam.duration > 0
   ) {
     return new Date(startsAt.getTime() + exam.duration * 60 * 1000);
+  }
+
+  const explicitEnd = parseExamDate(exam.endsAt);
+
+  if (explicitEnd) {
+    return explicitEnd;
   }
 
   return null;
