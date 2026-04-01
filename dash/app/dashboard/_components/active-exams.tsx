@@ -210,9 +210,11 @@ export function ActiveExams() {
               {headerSubtitle}
             </p>
           </div>
-          <button className="text-[12px] text-[#31A8E0] font-semibold hover:underline">
-            Бүгдийг харах →
-          </button>
+          <Link href="/monitoring">
+            <button className="text-[12px] text-[#31A8E0] font-semibold hover:underline">
+              Бүгдийг харах →
+            </button>
+          </Link>
         </div>
       </CardHeader>
       <CardContent className="px-5 pb-5 pt-4 flex flex-col gap-3">
@@ -230,16 +232,16 @@ export function ActiveExams() {
             const Icon = hasViolations ? Monitor : Info;
             const iconBg = hasViolations
               ? "bg-[#31A8E0]/10"
-              : "bg-[#27ae60]/10";
+              : "bg-[#087e8b]/10";
             const iconColor = hasViolations
               ? "text-[#31A8E0]"
-              : "text-[#27ae60]";
+              : "text-[#087e8b]";
             const violationsColor = hasViolations
               ? "text-red-500"
-              : "text-[#27ae60]";
+              : "text-[#087e8b]";
             const btnBg = hasViolations
               ? "bg-[#31A8E0] hover:bg-[#1fa8bb]"
-              : "bg-[#27ae60] hover:bg-[#219a52]";
+              : "bg-[#087e8b] hover:bg-[#087e8b]/80";
 
             return (
               <div
