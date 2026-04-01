@@ -37,7 +37,7 @@ export function Sidebar() {
   const { user } = useUser();
 
   return (
-    <aside className="sticky top-0 h-screen w-[220px] shrink-0 bg-[linear-gradient(to_bottom,#24485F_0%,#296181_48%,#31A8E0_100%)] flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-screen w-[220px] shrink-0 bg-[linear-gradient(to_bottom,#24485F_0%,#296181_48%,#31A8E0_100%)] flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-[22px] border-b border-white/[0.07]">
         <div className="w-[34px] h-[34px] rounded-[9px] bg-[#31A8E0] flex items-center justify-center text-white font-bold text-base shrink-0">

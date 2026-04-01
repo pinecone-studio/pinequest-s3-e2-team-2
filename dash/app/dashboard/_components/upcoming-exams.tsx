@@ -174,7 +174,7 @@ export function UpcomingExams() {
   }, [loading, error, items.length]);
 
   return (
-    <Card className="shadow-[0_1px_4px_rgba(0,0,0,0.06)] border-[#e8eef4]">
+    <Card className="shadow-[0_1px_4px_rgba(0,0,0,0.06)] border-[#e8eef4] h-full flex flex-col">
       <CardHeader className="pb-0 pt-5 px-5">
         <CardTitle className="text-[14px] font-bold text-[#2c3e50]">
           Удахгүй болох шалгалт
@@ -182,7 +182,7 @@ export function UpcomingExams() {
         <p className="text-[11.5px] text-[#8a9bb0] mt-0.5">{subtitle}</p>
       </CardHeader>
 
-      <CardContent className="px-5 pb-5 pt-3 flex flex-col divide-y divide-[#e8eef4]">
+      <CardContent className="px-5 pb-5 pt-3 flex flex-1 flex-col divide-y divide-[#e8eef4]">
         {loading ? (
           <div className="py-2.5 text-[12px] text-[#8a9bb0]">
             Ачааллаж байна...
