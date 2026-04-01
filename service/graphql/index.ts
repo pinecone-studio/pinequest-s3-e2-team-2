@@ -39,6 +39,9 @@ import { examQuestionQueries } from "./modules/exam-questions/queries";
 import { examQuestionMutations } from "./modules/exam-questions/mutations";
 import { examSqsTypeDefs } from "./modules/exams-sqs/schema";
 import { examSqsMutations } from "./modules/exams-sqs/mutations";
+import { cheatLogTypeDefs } from "./modules/cheat-logs/schema";
+import { cheatLogQueries } from "./modules/cheat-logs/queries";
+import { cheatLogMutations } from "./modules/cheat-logs/mutations";
 
 export const typeDefs = `#graphql
   type Query { _: Boolean }
@@ -55,6 +58,7 @@ export const typeDefs = `#graphql
   ${enrollmentTypeDefs}
   ${examQuestionTypeDefs}
   ${examSqsTypeDefs}
+    ${cheatLogTypeDefs}
 `;
 
 export const resolvers = {
@@ -69,6 +73,7 @@ export const resolvers = {
     ...submissionAnswerQueries,
     ...enrollmentQueries,
     ...examQuestionQueries,
+    ...cheatLogQueries,
   },
   Mutation: {
     ...teacherMutations,
@@ -82,6 +87,7 @@ export const resolvers = {
     ...enrollmentMutations,
     ...examQuestionMutations,
     ...examSqsMutations,
+    ...cheatLogMutations,
   },
   Course: relationResolvers.Course,
   Exam: relationResolvers.Exam,
