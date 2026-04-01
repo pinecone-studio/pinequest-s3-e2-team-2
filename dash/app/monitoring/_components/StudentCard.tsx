@@ -43,6 +43,58 @@ function getAlertIcon(type?: StudentAlert["type"]) {
   }
 }
 
+export function StudentAlertDetail({ student }: { student: Student }) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-(--monitoring-dark-border) bg-(--monitoring-primary-surface) p-4">
+        <p className="text-sm text-(--monitoring-muted)">Сурагч</p>
+        <p className="font-semibold text-(--monitoring-dark)">{student.name}</p>
+        <p className="text-sm text-(--monitoring-muted)">{student.email}</p>
+      </div>
+
+      <div className="rounded-xl border border-(--monitoring-warning-border) bg-(--monitoring-warning-surface) p-4">
+        <div className="mb-3 flex items-center gap-2 text-(--monitoring-warning)">
+          {getAlertIcon(student.latestAlert?.type)}
+          <span className="font-semibold">
+            {student.latestAlert?.message ??
+              getAlertTypeLabel(student.latestAlert?.type)}
+          </span>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between gap-4">
+            <span className="text-(--monitoring-muted)">Зөрчлийн төрөл</span>
+            <span className="font-medium text-(--monitoring-dark)">
+              {getAlertTypeLabel(student.latestAlert?.type)}
+            </span>
+          </div>
+
+          <div className="flex justify-between gap-4">
+            <span className="text-(--monitoring-muted)">Илэрсэн хугацаа</span>
+            <span className="font-medium text-(--monitoring-dark)">
+              {student.latestAlert?.time ?? "Саяхан"}
+            </span>
+          </div>
+
+          <div className="flex justify-between gap-4">
+            <span className="text-(--monitoring-muted)">Tab сольсон тоо</span>
+            <span className="font-medium text-(--monitoring-dark)">
+              {student.tabSwitches} удаа
+            </span>
+          </div>
+
+          <div className="flex justify-between gap-4">
+            <span className="text-(--monitoring-muted)">Одоогийн төлөв</span>
+            <span className="font-medium text-(--monitoring-dark)">
+              {getStatusLabel(student.status)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StudentCardContent({
   student,
   clickable = false,
@@ -160,64 +212,7 @@ export function StudentCard({ student }: Props) {
             Сурагч дээр илэрсэн анхааруулгын дэлгэрэнгүй
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="rounded-xl border border-(--monitoring-dark-border) bg-(--monitoring-primary-surface) p-4">
-            <p className="text-sm text-(--monitoring-muted)">Сурагч</p>
-            <p className="font-semibold text-(--monitoring-dark)">
-              {student.name}
-            </p>
-            <p className="text-sm text-(--monitoring-muted)">{student.email}</p>
-          </div>
-
-          <div className="rounded-xl border border-(--monitoring-warning-border) bg-(--monitoring-warning-surface) p-4">
-            <div className="mb-3 flex items-center gap-2 text-(--monitoring-warning)">
-              {getAlertIcon(student.latestAlert?.type)}
-              <span className="font-semibold">
-                {student.latestAlert?.message ??
-                  getAlertTypeLabel(student.latestAlert?.type)}
-              </span>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-(--monitoring-muted)">
-                  Зөрчлийн төрөл
-                </span>
-                <span className="font-medium text-(--monitoring-dark)">
-                  {getAlertTypeLabel(student.latestAlert?.type)}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-4">
-                <span className="text-(--monitoring-muted)">
-                  Илэрсэн хугацаа
-                </span>
-                <span className="font-medium text-(--monitoring-dark)">
-                  {student.latestAlert?.time ?? "Саяхан"}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-4">
-                <span className="text-(--monitoring-muted)">
-                  Tab сольсон тоо
-                </span>
-                <span className="font-medium text-(--monitoring-dark)">
-                  {student.tabSwitches} удаа
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-4">
-                <span className="text-(--monitoring-muted)">
-                  Одоогийн төлөв
-                </span>
-                <span className="font-medium text-(--monitoring-dark)">
-                  {getStatusLabel(student.status)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StudentAlertDetail student={student} />
       </DialogContent>
     </Dialog>
   );

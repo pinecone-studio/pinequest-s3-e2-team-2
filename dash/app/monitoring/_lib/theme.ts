@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 
 export const theme = {
   dark: "#0F1923",
-  primary: "#00B89C",
+  primary: "#31A8E0",
   warning: "#F0A500",
 } as const;
 

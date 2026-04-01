@@ -37,7 +37,7 @@ export function StatCard({ title, value, icon: Icon, tone = "dark" }: Props) {
 
   return (
     <Card className="rounded-2xl border-[var(--monitoring-dark-border)] bg-white shadow-sm ">
-      <CardContent className="flex items-center gap-4 p-2">
+      <CardContent className="flex items-center gap-4 ">
         <div className={`rounded-2xl p-4 ${styles.iconBgClassName}`}>
           <Icon className={`h-7 w-7 ${styles.iconTextClassName}`} />
         </div>

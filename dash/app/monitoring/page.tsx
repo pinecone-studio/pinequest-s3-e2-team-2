@@ -4,31 +4,299 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Monitor, Wifi } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { graphqlRequest } from "@/lib/graphql";
 
+import { StudentAlertDetail } from "./_components/StudentCard";
 import { MonitoringFilters } from "./_components/MonitoringFilters";
 import { MonitoringHeader } from "./_components/MonitoringHeader";
 import { MonitoringPageSkeleton } from "./_components/MonitoringPageSkeleton";
 import { StatCard } from "./_components/StatCard";
-import { students } from "./_data/students";
 import { monitoringCssVars } from "./_lib/theme";
 import { LiveMonitorPanel } from "./_components/LiveMonitorPanel";
+import type { Student, StudentAlert } from "./_lib/types";
 
 type StudentFilter = "all" | "alert";
 
-const PAGE_SIZE = 8;
+const MONITORING_QUERY = `#graphql
+  query MonitoringPageData {
+    students {
+      id
+      name
+      email
+    }
+    enrollments {
+      id
+      student_id
+      course_id
+    }
+    courses {
+      id
+      name
+      code
+    }
+    exams {
+      id
+      title
+      course_id
+      questions {
+        id
+      }
+    }
+    submissions {
+      id
+      student_id
+      exam_id
+      started_at
+      submitted_at
+      status
+      answers {
+        id
+      }
+    }
+    cheatLogs {
+      id
+      student_id
+      exam_id
+      type
+      event
+      severity
+      created_at
+    }
+  }
+`;
+
+type MonitoringQueryData = {
+  students: Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+  }> | null;
+  enrollments: Array<{
+    id: string;
+    student_id: string;
+    course_id: string;
+  }> | null;
+  courses: Array<{
+    id: string;
+    name: string | null;
+    code: string | null;
+  }> | null;
+  exams: Array<{
+    id: string;
+    title: string | null;
+    course_id: string | null;
+    questions: Array<{ id: string }> | null;
+  }> | null;
+  submissions: Array<{
+    id: string;
+    student_id: string;
+    exam_id: string;
+    started_at: string | null;
+    submitted_at: string | null;
+    status: "in_progress" | "submitted" | "reviewed" | null;
+    answers: Array<{ id: string }> | null;
+  }> | null;
+  cheatLogs: Array<{
+    id: string;
+    student_id: string | null;
+    exam_id: string | null;
+    type: string | null;
+    event: string | null;
+    severity: number | null;
+    created_at: string | null;
+  }> | null;
+};
+type GqlSubmission = NonNullable<MonitoringQueryData["submissions"]>[number];
+type GqlCheatLog = NonNullable<MonitoringQueryData["cheatLogs"]>[number];
+
+const getTimestamp = (value: string | null | undefined) => {
+  if (!value) return 0;
+  const ts = new Date(value).getTime();
+  return Number.isFinite(ts) ? ts : 0;
+};
+
+function toStudentAlertType(
+  type: string | null | undefined,
+): StudentAlert["type"] {
+  const normalized = (type ?? "").toLowerCase();
+  if (normalized.includes("phone")) return "phone";
+  if (normalized.includes("head")) return "headpose";
+  if (normalized.includes("people") || normalized.includes("person"))
+    return "people";
+  return "tab";
+}
+
+function formatClassName(course?: {
+  name: string | null;
+  code: string | null;
+}) {
+  if (!course) return "Тодорхойгүй анги";
+  const code = course.code?.trim();
+  const name = course.name?.trim();
+  if (code && name) return `${code} - ${name}`;
+  return code ?? name ?? "Тодорхойгүй анги";
+}
 
 export default function MonitoringPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
   const [classFilter, setClassFilter] = useState("all");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearTimeout(timer);
+    const loadMonitoringData = async () => {
+      if (!cancelled) {
+        setLoadError(null);
+      }
+
+      try {
+        const monitoringData =
+          await graphqlRequest<MonitoringQueryData>(MONITORING_QUERY);
+
+        const gqlStudents = monitoringData.students ?? [];
+        const enrollments = monitoringData.enrollments ?? [];
+        const courses = monitoringData.courses ?? [];
+        const exams = monitoringData.exams ?? [];
+        const submissions = monitoringData.submissions ?? [];
+        const cheatLogs = monitoringData.cheatLogs ?? [];
+
+        const courseById = new Map(
+          courses.map((course) => [course.id, course]),
+        );
+        const examById = new Map(exams.map((exam) => [exam.id, exam]));
+
+        const enrollmentsByStudentId = new Map<string, string[]>();
+        for (const enrollment of enrollments) {
+          const next = enrollmentsByStudentId.get(enrollment.student_id) ?? [];
+          next.push(enrollment.course_id);
+          enrollmentsByStudentId.set(enrollment.student_id, next);
+        }
+
+        const submissionsByStudentId = new Map<string, GqlSubmission[]>();
+        for (const submission of submissions) {
+          const next = submissionsByStudentId.get(submission.student_id) ?? [];
+          next.push(submission);
+          submissionsByStudentId.set(submission.student_id, next);
+        }
+
+        const cheatLogsByStudentId = new Map<string, GqlCheatLog[]>();
+        for (const log of cheatLogs) {
+          if (!log.student_id) continue;
+          const next = cheatLogsByStudentId.get(log.student_id) ?? [];
+          next.push(log);
+          cheatLogsByStudentId.set(log.student_id, next);
+        }
+
+        const nextStudents: Student[] = gqlStudents.map((student, index) => {
+          const studentSubmissions =
+            submissionsByStudentId
+              .get(student.id)
+              ?.sort(
+                (a, b) =>
+                  getTimestamp(b.submitted_at ?? b.started_at) -
+                  getTimestamp(a.submitted_at ?? a.started_at),
+              ) ?? [];
+          const latestSubmission = studentSubmissions[0];
+          const latestExam = latestSubmission
+            ? examById.get(latestSubmission.exam_id)
+            : undefined;
+
+          const enrolledCourseId =
+            enrollmentsByStudentId.get(student.id)?.[0] ?? null;
+          const enrolledCourse = enrolledCourseId
+            ? courseById.get(enrolledCourseId)
+            : undefined;
+          const classCourse = latestExam?.course_id
+            ? courseById.get(latestExam.course_id)
+            : enrolledCourse;
+          const className = formatClassName(classCourse);
+          const studentCheatLogs =
+            cheatLogsByStudentId
+              .get(student.id)
+              ?.sort(
+                (a, b) =>
+                  getTimestamp(b.created_at) - getTimestamp(a.created_at),
+              ) ?? [];
+
+          const latestAlert = studentCheatLogs[0]
+            ? {
+                type: toStudentAlertType(studentCheatLogs[0].type),
+                message:
+                  studentCheatLogs[0].event ??
+                  studentCheatLogs[0].type ??
+                  "Зөрчил илэрсэн",
+                time: new Date(
+                  studentCheatLogs[0].created_at ?? Date.now(),
+                ).toLocaleString(),
+              }
+            : null;
+
+          const tabSwitches = studentCheatLogs.length;
+          const answeredCount = latestSubmission?.answers?.length ?? 0;
+          const totalQuestions =
+            latestExam?.questions?.length && latestExam.questions.length > 0
+              ? latestExam.questions.length
+              : Math.max(answeredCount, 1);
+
+          const status =
+            latestSubmission?.status === "submitted" ||
+            latestSubmission?.status === "reviewed"
+              ? "submitted"
+              : latestSubmission?.status === "in_progress"
+                ? "online"
+                : "offline";
+
+          return {
+            id: Number.parseInt(student.id, 10) || index + 1,
+            name: student.name ?? "Нэргүй сурагч",
+            email: student.email ?? "email-гүй",
+            className,
+            status,
+            currentQuestion: answeredCount,
+            totalQuestions,
+            tabSwitches,
+            latestAlert,
+          };
+        });
+
+        if (!cancelled) {
+          setStudents(nextStudents);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Monitoring data ачаалж чадсангүй",
+        );
+        setStudents([]);
+        setIsLoading(false);
+      }
+    };
+
+    void loadMonitoringData();
+    intervalId = setInterval(() => {
+      void loadMonitoringData();
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   const handleSearchChange = (value: string) => {
@@ -45,7 +313,7 @@ export default function MonitoringPage() {
 
   const classOptions = useMemo(() => {
     return Array.from(new Set(students.map((student) => student.className)));
-  }, []);
+  }, [students]);
 
   const classFilteredStudents = useMemo(() => {
     if (classFilter === "all") {
@@ -53,7 +321,7 @@ export default function MonitoringPage() {
     }
 
     return students.filter((student) => student.className === classFilter);
-  }, [classFilter]);
+  }, [classFilter, students]);
 
   const visibleStudents = useMemo(() => {
     return classFilteredStudents.filter((student) => {
@@ -69,8 +337,6 @@ export default function MonitoringPage() {
       return matchesSearch && matchesStudentFilter;
     });
   }, [classFilteredStudents, searchTerm, studentFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(visibleStudents.length / PAGE_SIZE));
 
   const stats = useMemo(() => {
     return {
@@ -99,8 +365,13 @@ export default function MonitoringPage() {
           classOptions={classOptions}
           onClassChange={handleClassChange}
         />
+        {loadError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Monitoring data ачаалж чадсангүй: {loadError}
+          </div>
+        ) : null}
         <LiveMonitorPanel roomId="exam-room-1" />
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-4 ">
+        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-4 p-0">
           <StatCard
             title="Нийт сурагч"
             value={stats.total}
@@ -179,14 +450,13 @@ export default function MonitoringPage() {
                       (student.currentQuestion / student.totalQuestions) * 100,
                     );
 
-                    return (
+                    const rowContent = (
                       <div
-                        key={student.id}
                         className={`grid grid-cols-12 gap-3 px-4 py-3 text-sm ${
                           hasAlert
                             ? "bg-[var(--monitoring-warning-surface)]"
                             : ""
-                        }`}
+                        } ${hasAlert ? "cursor-pointer hover:bg-[var(--monitoring-warning-surface-strong)]" : ""}`}
                       >
                         <div className="col-span-3 min-w-0">
                           <p className="truncate font-semibold text-[var(--monitoring-dark)]">
@@ -195,6 +465,11 @@ export default function MonitoringPage() {
                           <p className="truncate text-xs text-[var(--monitoring-muted)]">
                             {student.email}
                           </p>
+                          {student.latestAlert ? (
+                            <p className="truncate text-xs text-[var(--monitoring-warning)]">
+                              {student.latestAlert.message}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="col-span-3 min-w-0">
@@ -210,7 +485,7 @@ export default function MonitoringPage() {
                                 ? "bg-blue-50 text-blue-600"
                                 : student.status === "offline"
                                   ? "bg-gray-100 text-gray-600"
-                                  : "bg-green-50 text-green-600"
+                                  : "bg-[var(--monitoring-primary-soft)] text-[var(--monitoring-primary)]"
                             }`}
                           >
                             {statusText}
@@ -243,6 +518,31 @@ export default function MonitoringPage() {
                           </span>
                         </div>
                       </div>
+                    );
+
+                    if (!hasAlert) {
+                      return <div key={student.id}>{rowContent}</div>;
+                    }
+
+                    return (
+                      <Dialog key={student.id}>
+                        <DialogTrigger asChild>
+                          <button type="button" className="w-full text-left">
+                            {rowContent}
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="border-(--monitoring-dark-border) bg-white text-(--monitoring-dark) sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="text-(--monitoring-dark)">
+                              Зөрчлийн мэдээлэл
+                            </DialogTitle>
+                            <DialogDescription className="text-(--monitoring-muted)">
+                              Сурагч дээр илэрсэн анхааруулгын дэлгэрэнгүй
+                            </DialogDescription>
+                          </DialogHeader>
+                          <StudentAlertDetail student={student} />
+                        </DialogContent>
+                      </Dialog>
                     );
                   })}
                 </div>
