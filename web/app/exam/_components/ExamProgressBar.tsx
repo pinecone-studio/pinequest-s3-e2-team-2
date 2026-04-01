@@ -8,6 +8,11 @@ import ExamTimer from "./ExamTimer";
 import { Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+  getScheduledEndsAtMs,
+  getScheduledStartedAtIso,
+} from "../exam-schedule";
+import { useExamWarningTracker } from "../_hooks/use-exam-warning-tracker";
 
 export const ExamProgressBar = () => {
   const {
@@ -22,29 +27,25 @@ export const ExamProgressBar = () => {
     answeredCount,
     clearSavedExam,
   } = useExamState();
+  const { flushWarningLogs } = useExamWarningTracker();
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const progress = Math.round((answeredCount / totalQuestions) * 100);
+  const scheduledEndsAtMs = getScheduledEndsAtMs(exam);
 
   const getStartedAt = () => {
     if (typeof window === "undefined") {
-      return new Date().toISOString();
+      return getScheduledStartedAtIso(exam, scheduledEndsAtMs);
     }
 
     const endsAt = localStorage.getItem(`exam-ends-at:${exam.id}`);
+    const endsAtTime = endsAt ? Number(endsAt) : NaN;
 
-    if (!endsAt) {
-      return new Date().toISOString();
-    }
-
-    const endsAtTime = Number(endsAt);
-
-    if (Number.isNaN(endsAtTime)) {
-      return new Date().toISOString();
-    }
-
-    return new Date(endsAtTime - exam.durationSeconds * 1000).toISOString();
+    return getScheduledStartedAtIso(
+      exam,
+      Number.isFinite(endsAtTime) ? endsAtTime : scheduledEndsAtMs,
+    );
   };
 
   const handleDemoFill = () => {
@@ -90,6 +91,8 @@ export const ExamProgressBar = () => {
     setIsSubmitting(true);
 
     try {
+      await flushWarningLogs();
+
       await submitExamToBackend({
         studentEmail,
         studentName,
@@ -101,7 +104,7 @@ export const ExamProgressBar = () => {
       });
 
       clearSavedExam();
-      toast.success("Шалгалтын хариулт backend руу хадгалагдлаа.");
+      toast.success("Шалгалт амжилттай илгээгдлээ");
       router.push("/exams");
     } catch (error) {
       toast.error(
@@ -119,6 +122,7 @@ export const ExamProgressBar = () => {
       <ExamTimer
         durationSeconds={exam.durationSeconds}
         storageKey={`exam-ends-at:${exam.id}`}
+        scheduledEndsAtMs={scheduledEndsAtMs}
       />
       <div className="flex-1">
         <h3 className="text-sm font-medium mb-3 ">Асуултууд</h3>

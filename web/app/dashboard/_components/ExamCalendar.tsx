@@ -5,6 +5,12 @@ import { useUser } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { isHiddenStudentExam } from "@/lib/exam-visibility";
 import { cn } from "@/lib/utils";
@@ -115,13 +121,6 @@ function isSameDay(a: Date, b: Date) {
   );
 }
 
-const isTomorrow = (date: Date, baseDate: Date) => {
-  const tomorrow = startOfDay(baseDate);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return isSameDay(date, tomorrow);
-};
-
 const getDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -136,20 +135,6 @@ const formatListDate = (value: string) =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(value));
-
-const getUpcomingExamDateLabel = (value: string, baseDate: Date) => {
-  const examDate = new Date(value);
-
-  if (Number.isNaN(examDate.getTime())) {
-    return "Тов тодорхойгүй";
-  }
-
-  if (isTomorrow(examDate, baseDate)) {
-    return "Маргааш шалгалттай";
-  }
-
-  return formatListDate(value);
-};
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -228,7 +213,7 @@ export function ExamCalendar({
   const [exams, setExams] = useState<CalendarExam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [, setMessage] = useState<string | null>(null);
   const { user, isLoaded } = useUser();
 
   useEffect(() => {
@@ -303,13 +288,22 @@ export function ExamCalendar({
   const daysInPrevMonth = new Date(year, month, 0).getDate();
   const trailingDays = 42 - firstDayOfWeek - daysInMonth;
 
-  const upcomingExams = useMemo(() => exams.slice(0, 4), [exams]);
-  const hiddenUpcomingCount = exams.length - upcomingExams.length;
+  const examsByDate = useMemo(() => {
+    const nextMap = new Map<string, CalendarExam[]>();
+
+    for (const exam of exams) {
+      const current = nextMap.get(exam.dateKey) ?? [];
+      current.push(exam);
+      nextMap.set(exam.dateKey, current);
+    }
+
+    return nextMap;
+  }, [exams]);
 
   const isTodayDate = (date: Date) => isSameDay(date, calendarToday);
 
-  const hasExamOnDate = (date: Date) =>
-    exams.some((exam) => exam.dateKey === getDateKey(date));
+  const getExamsOnDate = (date: Date) =>
+    examsByDate.get(getDateKey(date)) ?? [];
 
   const isSelectedDate = (date: Date) =>
     selectedDate !== null && isSameDay(selectedDate, date);
@@ -326,14 +320,6 @@ export function ExamCalendar({
     }
 
     setSelectedDate(clicked);
-  };
-
-  const focusExamDate = (dateValue: string) => {
-    const date = new Date(dateValue);
-
-    setYear(date.getFullYear());
-    setMonth(date.getMonth());
-    setSelectedDate(date);
   };
 
   const changeMonth = (dir: 1 | -1) => {
@@ -354,202 +340,220 @@ export function ExamCalendar({
     setYear(nextYear);
   };
 
+  const renderDayCell = ({
+    key,
+    date,
+    label,
+    isCurrentMonth,
+  }: {
+    key: string;
+    date: Date;
+    label: number;
+    isCurrentMonth: boolean;
+  }) => {
+    const todayDay = isTodayDate(date);
+    const selectedDay = isSelectedDate(date);
+    const dayExams = getExamsOnDate(date);
+    const examDay = dayExams.length > 0;
+    const cell = (
+      <div
+        onClick={() => handleDayClick(date)}
+        className={cn(
+          "mx-auto flex h-[26px] w-[26px] cursor-pointer select-none items-center justify-center rounded-full text-[10px] transition-all",
+          todayDay &&
+            "bg-[#006d77] font-bold text-white shadow-md shadow-[#006d77]/20",
+          examDay &&
+            !todayDay &&
+            "bg-[#e6f4f1] font-bold text-[#006d77] ring-1 ring-[#006d77]/15",
+          selectedDay && "scale-105 ring-2 ring-[#b7d8d2]",
+          !todayDay &&
+            !examDay &&
+            !selectedDay &&
+            (isCurrentMonth
+              ? "text-slate-600 hover:bg-slate-100"
+              : "text-slate-300 hover:bg-slate-100"),
+        )}
+      >
+        {label}
+      </div>
+    );
+
+    if (!examDay) {
+      return <div key={key}>{cell}</div>;
+    }
+
+    return (
+      <Tooltip key={key}>
+        <TooltipTrigger asChild>{cell}</TooltipTrigger>
+        <TooltipContent
+          side="top"
+          sideOffset={8}
+          className="max-w-64 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-200 shadow-lg"
+        >
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-[#006d77]">
+              Шалгалттай өдөр
+            </p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
   return (
-    <Card
-      className={cn(
-        "flex min-h-[286px] min-w-0 w-full self-start flex-col overflow-hidden rounded-2xl border-white/40 bg-white/60 ring-1 ring-black/8 sm:min-h-[300px] lg:min-h-[320px] lg:max-w-[380px] xl:max-w-[392px]",
-        className,
-      )}
-    >
-      <CardHeader className="px-5">
-        <CardTitle className="flex items-center gap-2 text-sm font-bold text-slate-800">
-          <div className="rounded-lg bg-[#e6f4f1] p-1.5 text-[#006d77]">
-            <CalendarDays className="h-3.5 w-3.5" />
-          </div>
-          Шалгалтын хуваарь
-        </CardTitle>
-      </CardHeader>
+    <TooltipProvider>
+      <Card
+        className={cn(
+          "flex min-h-[286px] min-w-0 w-full self-start flex-col overflow-hidden rounded-2xl border-white/40 bg-white/60 ring-1 ring-black/8 sm:min-h-[300px] lg:min-h-[320px] lg:max-w-[380px] xl:max-w-[392px]",
+          className,
+        )}
+      >
+        <CardHeader className="px-5">
+          <CardTitle className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <div className="rounded-lg bg-[#e6f4f1] p-1.5 text-[#006d77]">
+              <CalendarDays className="h-3.5 w-3.5" />
+            </div>
+            Шалгалтын хуваарь
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col px-5 pb-3">
-        {loading ? (
-          <div className="flex flex-1 flex-col">
-            <div className="mb-3 mt-0 flex items-center justify-between">
-              <Skeleton className="h-7 w-7 rounded-full bg-slate-200" />
-              <Skeleton className="h-4 w-28 bg-slate-200" />
-              <Skeleton className="h-7 w-7 rounded-full bg-slate-200" />
-            </div>
-
-            <div className="mb-1.5 grid grid-cols-7 gap-1">
-              {Array.from({ length: 7 }, (_, index) => (
-                <Skeleton
-                  key={`weekday-skeleton-${index + 1}`}
-                  className="h-4 w-full bg-slate-200"
-                />
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: 35 }, (_, index) => (
-                <Skeleton
-                  key={`day-skeleton-${index + 1}`}
-                  className="mx-auto h-[26px] w-[26px] rounded-full bg-slate-200"
-                />
-              ))}
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {Array.from({ length: 3 }, (_, index) => (
-                <Skeleton
-                  key={`list-skeleton-${index + 1}`}
-                  className="h-9 w-full rounded-lg bg-slate-200"
-                />
-              ))}
-            </div>
-          </div>
-        ) : error ? (
-          <div className="flex flex-1 items-center">
-            <div className="w-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">
-              {error}
-            </div>
-          </div>
-        ) : (
-          <>
-            <div>
+        <CardContent className="flex flex-1 flex-col px-5 pb-3">
+          {loading ? (
+            <div className="flex flex-1 flex-col">
               <div className="mb-3 mt-0 flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-slate-400 hover:bg-[#e6f4f1]/70 hover:text-[#006d77]"
-                  onClick={() => changeMonth(-1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-xs font-bold tracking-tight text-slate-700">
-                  {year} оны {MONTH_NAMES[month]}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-slate-400 hover:bg-[#e6f4f1]/70 hover:text-[#006d77]"
-                  onClick={() => changeMonth(1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <Skeleton className="h-7 w-7 rounded-full bg-slate-200" />
+                <Skeleton className="h-4 w-28 bg-slate-200" />
+                <Skeleton className="h-7 w-7 rounded-full bg-slate-200" />
               </div>
 
-              <div className="mb-1.5 grid grid-cols-7">
-                {WEEKDAYS.map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-[10px] font-bold uppercase tracking-tighter text-slate-400"
-                  >
-                    {day}
-                  </div>
+              <div className="mb-1.5 grid grid-cols-7 gap-1">
+                {Array.from({ length: 7 }, (_, index) => (
+                  <Skeleton
+                    key={`weekday-skeleton-${index + 1}`}
+                    className="h-4 w-full bg-slate-200"
+                  />
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-y-1">
-                {Array.from({ length: firstDayOfWeek }, (_, index) => {
-                  const day = daysInPrevMonth - firstDayOfWeek + 1 + index;
-                  const date = new Date(year, month - 1, day);
-                  const examDay = hasExamOnDate(date);
-                  const selectedDay = isSelectedDate(date);
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 35 }, (_, index) => (
+                  <Skeleton
+                    key={`day-skeleton-${index + 1}`}
+                    className="mx-auto h-[26px] w-[26px] rounded-full bg-slate-200"
+                  />
+                ))}
+              </div>
 
-                  return (
-                    <div
-                      key={`prev-${index + 1}`}
-                      onClick={() => handleDayClick(date)}
-                      className={cn(
-                        "mx-auto flex h-[26px] w-[26px] cursor-pointer select-none items-center justify-center rounded-full text-[10px] transition-all",
-                        examDay &&
-                          "bg-[#e6f4f1] font-bold text-[#006d77] ring-1 ring-[#006d77]/15",
-                        selectedDay && "scale-105 ring-2 ring-[#b7d8d2]",
-                        !examDay &&
-                          !selectedDay &&
-                          "text-slate-300 hover:bg-slate-100",
-                      )}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
+              <div className="mt-3 space-y-2">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <Skeleton
+                    key={`list-skeleton-${index + 1}`}
+                    className="h-9 w-full rounded-lg bg-slate-200"
+                  />
+                ))}
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-1 items-center">
+              <div className="w-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">
+                {error}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <div className="mb-3 mt-0 flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-400 hover:bg-[#e6f4f1]/70 hover:text-[#006d77]"
+                    onClick={() => changeMonth(-1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs font-bold tracking-tight text-slate-700">
+                    {year} оны {MONTH_NAMES[month]}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-400 hover:bg-[#e6f4f1]/70 hover:text-[#006d77]"
+                    onClick={() => changeMonth(1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
 
-                {Array.from({ length: daysInMonth }, (_, index) => {
-                  const day = index + 1;
-                  const date = new Date(year, month, day);
-                  const todayDay = isTodayDate(date);
-                  const examDay = hasExamOnDate(date);
-                  const selectedDay = isSelectedDate(date);
-
-                  return (
+                <div className="mb-1.5 grid grid-cols-7">
+                  {WEEKDAYS.map((day) => (
                     <div
                       key={day}
-                      onClick={() => handleDayClick(date)}
-                      className={cn(
-                        "mx-auto flex h-[26px] w-[26px] cursor-pointer select-none items-center justify-center rounded-full text-[10px] transition-all",
-                        todayDay &&
-                          "bg-[#006d77] font-bold text-white shadow-md shadow-[#006d77]/20",
-                        examDay &&
-                          !todayDay &&
-                          "bg-[#e6f4f1] font-bold text-[#006d77] ring-1 ring-[#006d77]/15",
-                        selectedDay && "scale-105 ring-2 ring-[#b7d8d2]",
-                        !todayDay &&
-                          !examDay &&
-                          !selectedDay &&
-                          "text-slate-600 hover:bg-slate-100",
-                      )}
+                      className="text-center text-[10px] font-bold uppercase tracking-tighter text-slate-400"
                     >
                       {day}
                     </div>
-                  );
-                })}
-
-                {Array.from({ length: trailingDays }, (_, index) => {
-                  const day = index + 1;
-                  const date = new Date(year, month + 1, day);
-                  const examDay = hasExamOnDate(date);
-                  const selectedDay = isSelectedDate(date);
-
-                  return (
-                    <div
-                      key={`next-${index + 1}`}
-                      onClick={() => handleDayClick(date)}
-                      className={cn(
-                        "mx-auto flex h-[26px] w-[26px] cursor-pointer select-none items-center justify-center rounded-full text-[10px] transition-all",
-                        examDay &&
-                          "bg-[#e6f4f1] font-bold text-[#006d77] ring-1 ring-[#006d77]/15",
-                        selectedDay && "scale-105 ring-2 ring-[#b7d8d2]",
-                        !examDay &&
-                          !selectedDay &&
-                          "text-slate-300 hover:bg-slate-100",
-                      )}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="pt-3">
-              <div className="flex shrink-0 items-center gap-4 border-t border-slate-100 pt-2.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-[#006d77]" />
-                  <span className="text-[10px] font-medium text-slate-500">
-                    Өнөөдөр
-                  </span>
+                  ))}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-[#e6f4f1] ring-1 ring-[#006d77]/20" />
-                  <span className="text-[10px] font-medium text-slate-500">
-                    Шалгалттай
-                  </span>
+
+                <div className="grid grid-cols-7 gap-y-1">
+                  {Array.from({ length: firstDayOfWeek }, (_, index) => {
+                    const day = daysInPrevMonth - firstDayOfWeek + 1 + index;
+                    const date = new Date(year, month - 1, day);
+
+                    return renderDayCell({
+                      key: `prev-${index + 1}`,
+                      date,
+                      label: day,
+                      isCurrentMonth: false,
+                    });
+                  })}
+
+                  {Array.from({ length: daysInMonth }, (_, index) => {
+                    const day = index + 1;
+                    const date = new Date(year, month, day);
+
+                    return renderDayCell({
+                      key: `${day}`,
+                      date,
+                      label: day,
+                      isCurrentMonth: true,
+                    });
+                  })}
+
+                  {Array.from({ length: trailingDays }, (_, index) => {
+                    const day = index + 1;
+                    const date = new Date(year, month + 1, day);
+
+                    return renderDayCell({
+                      key: `next-${index + 1}`,
+                      date,
+                      label: day,
+                      isCurrentMonth: false,
+                    });
+                  })}
                 </div>
               </div>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+
+              <div className="pt-3">
+                <div className="flex shrink-0 items-center gap-4 border-t border-slate-100 pt-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[#006d77]" />
+                    <span className="text-[10px] font-medium text-slate-500">
+                      Өнөөдөр
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[#e6f4f1] ring-1 ring-[#006d77]/20" />
+                    <span className="text-[10px] font-medium text-slate-500">
+                      Шалгалттай
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }

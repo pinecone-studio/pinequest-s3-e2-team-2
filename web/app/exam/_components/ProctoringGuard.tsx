@@ -3,9 +3,14 @@
 import { useProctorMonitor } from "@/hooks/use-proctoring-monitor";
 import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import {
+  EXAM_WARNING_CODES,
+  useExamWarningTracker,
+} from "../_hooks/use-exam-warning-tracker";
 
 export function ProctoringGuard() {
   const { videoRef, isReady, error, state } = useProctorMonitor();
+  const { recordWarning } = useExamWarningTracker();
 
   const flags = useMemo(() => {
     const next: string[] = [];
@@ -41,6 +46,19 @@ export function ProctoringGuard() {
     lastToastRef.current = signature;
     lastToastTimeRef.current = now;
 
+    if (flags.includes("Олон хүн илэрсэн")) {
+      recordWarning(EXAM_WARNING_CODES.proctorMultiplePeople);
+    }
+    if (flags.includes("Царай харагдахгүй байна")) {
+      recordWarning(EXAM_WARNING_CODES.proctorFaceMissing);
+    }
+    if (flags.includes("Доош харж байна")) {
+      recordWarning(EXAM_WARNING_CODES.proctorLookingDown);
+    }
+    if (flags.includes("Утас харагдаж байна")) {
+      recordWarning(EXAM_WARNING_CODES.proctorPhoneVisible);
+    }
+
     const severe =
       flags.includes("Олон хүн илэрсэн") ||
       flags.includes("Царай харагдахгүй байна");
@@ -59,16 +77,18 @@ export function ProctoringGuard() {
         duration: 2500,
       });
     }
-  }, [flags, isReady, error]);
+  }, [error, flags, isReady, recordWarning]);
 
   useEffect(() => {
     if (!error) return;
+
+    recordWarning(EXAM_WARNING_CODES.proctorUnavailable);
 
     toast.error("Proctoring unavailable", {
       description: error,
       duration: 3000,
     });
-  }, [error]);
+  }, [error, recordWarning]);
 
   return (
     <video

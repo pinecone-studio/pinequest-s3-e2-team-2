@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { BookOpen, Clock, FileCheck2, Target } from "lucide-react";
+import {
+  BadgePercent,
+  BookOpen,
+  Clock,
+  FileCheck2,
+  Target,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isHiddenStudentExam } from "@/lib/exam-visibility";
@@ -348,7 +354,7 @@ export function StatCards() {
             ? `${averageScoreSummary} · ${stats.reviewedCount} шалгалт үнэлэгдсэн`
             : `${stats.reviewedCount} шалгалт үнэлэгдсэн`
           : "Шалгасан үнэлгээ хараахан алга",
-      icon: <Target className="w-4 h-4 text-[#006d77]" />,
+      icon: <BadgePercent className="w-4 h-4 text-[#006d77]" />,
     },
   ];
 

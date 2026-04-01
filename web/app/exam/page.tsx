@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ExamHeader, ExamProgressBar, ExamQA } from "./_components";
 import { ProctoringGuard } from "./_components/ProctoringGuard";
 import { ExamProvider } from "./_hooks/use-exam-states";
+import {
+  EXAM_WARNING_CODES,
+  ExamWarningTrackerProvider,
+  useExamWarningTracker,
+} from "./_hooks/use-exam-warning-tracker";
 import { useExamData } from "./_hooks/use-exam-data";
 
 const Exam = () => {
@@ -38,7 +43,9 @@ const Exam = () => {
 
   return (
     <ExamProvider exam={data.exam} questions={data.questions}>
-      <ExamContent />
+      <ExamWarningTrackerProvider>
+        <ExamContent />
+      </ExamWarningTrackerProvider>
     </ExamProvider>
   );
 };
@@ -46,16 +53,15 @@ const Exam = () => {
 export default Exam;
 
 export const ExamContent = () => {
-  const [warningCount, setWarningCount] = useState<number>(0);
+  const { recordWarning, warningCount } = useExamWarningTracker();
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const recordWarning = (message: string) => {
-    setWarningCount((prev) => {
-      const next = prev + 1;
-      console.log(`[exam-warning:${next}] ${message}`);
-      return next;
-    });
-  };
+  const registerWarning = useCallback((code: string, description: string) => {
+    recordWarning(
+      code as (typeof EXAM_WARNING_CODES)[keyof typeof EXAM_WARNING_CODES],
+    );
+    console.log(`[exam-warning] ${code}: ${description}`);
+  }, [recordWarning]);
 
   useEffect(() => {
     console.log(`[exam-warning-count] ${warningCount}`);
@@ -64,22 +70,22 @@ export const ExamContent = () => {
   useEffect(() => {
     const handleWindowLeave = () => {
       if (document.hidden) return;
-      recordWarning("Цонхноос гарлаа!");
+      registerWarning(EXAM_WARNING_CODES.windowLeave, "Цонхноос гарлаа!");
     };
     document.addEventListener("mouseleave", handleWindowLeave);
     return () => document.removeEventListener("mouseleave", handleWindowLeave);
-  }, []);
+  }, [registerWarning]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        recordWarning("Tab сольж болохгүй!");
+        registerWarning(EXAM_WARNING_CODES.tabHidden, "Tab сольж болохгүй!");
       }
     };
 
     const handleWindowBlur = () => {
       if (document.hidden) return;
-      recordWarning("Цонхноос гарлаа!");
+      registerWarning(EXAM_WARNING_CODES.windowBlur, "Цонхноос гарлаа!");
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -89,7 +95,7 @@ export const ExamContent = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, []);
+  }, [registerWarning]);
 
   const handleExamLeave = () => {
     leaveTimeoutRef.current = setTimeout(() => {
