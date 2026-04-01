@@ -1,15 +1,26 @@
 "use client";
 
-import { useProctorMonitor } from "@/hooks/use-proctoring-monitor";
+import {
+  useProctorMonitor,
+  type UseProctorMonitorReturn,
+} from "@/hooks/use-proctoring-monitor";
+import { getSocket } from "@/lib/socket";
 import { useEffect, useMemo, useRef } from "react";
-import { toast } from "sonner";
 import {
   EXAM_WARNING_CODES,
   useExamWarningTracker,
 } from "../_hooks/use-exam-warning-tracker";
 
-export function ProctoringGuard() {
-  const { videoRef, isReady, error, state } = useProctorMonitor();
+type ProctoringWarningsProps = Pick<
+  UseProctorMonitorReturn,
+  "isReady" | "error" | "state"
+>;
+
+export function ProctoringWarnings({
+  isReady,
+  error,
+  state,
+}: ProctoringWarningsProps) {
   const { recordWarning } = useExamWarningTracker();
 
   const flags = useMemo(() => {
@@ -35,7 +46,6 @@ export function ProctoringGuard() {
     const now = Date.now();
     const signature = flags.join("|");
 
-    // same warning давтаж битгий spam хий
     if (
       signature === lastToastRef.current &&
       now - lastToastTimeRef.current < 4000
@@ -59,24 +69,6 @@ export function ProctoringGuard() {
       recordWarning(EXAM_WARNING_CODES.proctorPhoneVisible);
     }
 
-    const severe =
-      flags.includes("Олон хүн илэрсэн") ||
-      flags.includes("Царай харагдахгүй байна");
-
-    const title = severe ? "Сэжигтэй үйлдэл илэрсэн" : "Анхааруулга";
-    const description = flags.join(", ");
-
-    if (severe) {
-      toast.error(title, {
-        description,
-        duration: 3000,
-      });
-    } else {
-      toast.warning(title, {
-        description,
-        duration: 2500,
-      });
-    }
   }, [error, flags, isReady, recordWarning]);
 
   useEffect(() => {
@@ -84,19 +76,113 @@ export function ProctoringGuard() {
 
     recordWarning(EXAM_WARNING_CODES.proctorUnavailable);
 
-    toast.error("Proctoring unavailable", {
-      description: error,
-      duration: 3000,
-    });
   }, [error, recordWarning]);
 
+  return null;
+}
+
+export function ProctoringGuard() {
+  const monitor = useProctorMonitor();
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+
+  useEffect(() => {
+    if (monitor.error) return;
+    if (!monitor.isReady || !monitor.streamRef.current) return;
+
+    const roomId = "exam-room-1";
+    const socket = getSocket();
+    const stream = monitor.streamRef.current;
+
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+    pcRef.current = pc;
+
+    const createAndSendOffer = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        socket.emit("offer", {
+          roomId,
+          sdp: offer,
+        });
+      } catch (error) {
+        console.error("offer error:", error);
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", {
+          roomId,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    stream.getTracks().forEach((track) => {
+      pc.addTrack(track, stream);
+    });
+
+    socket.emit("join-room", {
+      roomId,
+      role: "student",
+    });
+
+    socket.on("peer-joined", async ({ role }) => {
+      if (role === "teacher") {
+        await createAndSendOffer();
+      }
+    });
+
+    socket.on("request-offer", async () => {
+      await createAndSendOffer();
+    });
+
+    socket.on("answer", async ({ sdp }) => {
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      } catch (error) {
+        console.error("setRemoteDescription error:", error);
+      }
+    });
+
+    socket.on("ice-candidate", async ({ candidate }) => {
+      if (!candidate) return;
+
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.error("addIceCandidate error:", error);
+      }
+    });
+
+    return () => {
+      socket.off("peer-joined");
+      socket.off("request-offer");
+      socket.off("answer");
+      socket.off("ice-candidate");
+
+      pc.close();
+      pcRef.current = null;
+    };
+  }, [monitor.error, monitor.isReady, monitor.streamRef]);
+
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      muted
-      playsInline
-      className="absolute -left-[9999px] top-0 h-px w-px opacity-0 pointer-events-none"
-    />
+    <>
+      <ProctoringWarnings
+        isReady={monitor.isReady}
+        error={monitor.error}
+        state={monitor.state}
+      />
+      <video
+        ref={monitor.videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="absolute -left-[9999px] top-0 h-px w-px opacity-0 pointer-events-none"
+      />
+    </>
   );
 }
