@@ -34,7 +34,7 @@ export const EssaySubmission = ({
               <span className="text-xs font-semibold text-gray-700">
                 Оюутны Хариулт
               </span>
-              <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 transition-colors">
+              <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#31A8E0] transition-colors">
                 <Pencil size={12} />
                 Тэмдэглэх
               </button>

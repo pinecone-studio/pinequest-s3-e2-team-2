@@ -300,7 +300,7 @@ const GradeStudentPage = () => {
                 </p>
                 <p>
                   Нийт дүн:{" "}
-                  <span className="font-bold text-blue-600">
+                  <span className="font-bold text-[#31A8E0]">
                     {totalScore}/{maxTotalScore}
                   </span>
                 </p>
@@ -309,7 +309,7 @@ const GradeStudentPage = () => {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={handleSubmit}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#31A8E0] hover:bg-[#2696CB] text-white text-sm font-semibold"
                 >
                   Дүн хадгалах
                 </button>

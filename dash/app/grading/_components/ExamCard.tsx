@@ -9,21 +9,23 @@ type ExamCardProps = {
 
 export const ExamCard = ({ course }: ExamCardProps) => {
   const router = useRouter();
+  if (!course || (course.total ?? 0) <= 0) return null;
+
   const progress = Math.round((course.graded / course.total) * 100);
   const isComplete = course.pending === 0;
 
   return (
     <div
-      className="relative bg-white border border-gray-200 rounded-2xl p-5 cursor-pointer hover:shadow-sm hover:border-blue-300 transition-all duration-200 flex flex-col gap-3"
+      className="relative bg-white border border-gray-200 rounded-2xl p-5 cursor-pointer hover:shadow-sm hover:border-[#31A8E0]/50 transition-all duration-200 flex flex-col gap-3"
       onClick={() => router.push(`/grading/${course.id}`)}
     >
       {course.pending > 0 && (
-        <span className="absolute top-4 right-4 text-xs font-medium text-red-700 bg-red-50 border-red-100 px-2.5 py-1 rounded-full">
+        <span className="absolute top-4 right-4 text-xs font-medium text-[#C27A17] bg-[#FFF7E8] border border-[#F5D8A8] px-2.5 py-1 rounded-full">
           {course.pending} хүлээгдэж байна
         </span>
       )}
 
-      <div className="rounded-lg h-10 w-10 bg-blue-50 flex items-center justify-center text-blue-500">
+      <div className="rounded-lg h-10 w-10 bg-[#31A8E0]/10 flex items-center justify-center text-[#31A8E0]">
         <FileText size={20} />
       </div>
 
@@ -52,7 +54,7 @@ export const ExamCard = ({ course }: ExamCardProps) => {
 
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
-            className="bg-blue-500 h-2 rounded-full transition-all"
+            className="bg-[#31A8E0] h-2 rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -64,8 +66,8 @@ export const ExamCard = ({ course }: ExamCardProps) => {
         </div>
         {isComplete && (
           <div className="flex items-center gap-1.5">
-            <CircleCheckBig size={16} color="#00a63e" strokeWidth={2.5} />
-            <span className="ml-1 text-green-600 font-medium">Дууссан</span>
+            <CircleCheckBig size={16} color="#1F9D8B" strokeWidth={2.5} />
+            <span className="ml-1 text-[#1F9D8B] font-medium">Дууссан</span>
           </div>
         )}
       </div>
