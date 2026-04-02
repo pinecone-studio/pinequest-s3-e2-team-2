@@ -121,22 +121,6 @@ export const CreateNewExam = () => {
     setImageUrl(null);
   };
 
-  const fillDemoData = () => {
-    setTitle("Програмчлалын үндэс - Дунд шатны сорил");
-    setDescription(
-      "Энэхүү шалгалт нь програмчлалын үндсэн ойлголтуудыг шалгах зорилготой.",
-    );
-    if (courses.length > 0) {
-      setCourseId(courses[0].id);
-    }
-    const today = new Date();
-    const dateStr = today.toISOString().split("T")[0];
-    setExamDate(dateStr);
-    setExamTime("14:00");
-    setDurationMinutes("90");
-    toast.info("Демо өгөгдлөөр бөглөлөө.");
-  };
-
   const buildStartEndIso = () => {
     if (!examDate || !examTime) {
       throw new Error("Өдөр болон цагийг сонгоно уу.");
@@ -388,45 +372,28 @@ export const CreateNewExam = () => {
         </div>
 
         {step === "shell" && (
-          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-5 py-3 shrink-0">
+          <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3 shrink-0">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" size="sm" disabled={saving}>
+                Болих
+              </Button>
+            </DialogClose>
             <Button
               type="button"
-              variant="outline"
               size="sm"
-              onClick={fillDemoData}
+              className="bg-blue-600 hover:bg-blue-700 text-white min-w-27.5"
+              onClick={() => void handleCreateShell()}
               disabled={saving}
-              className="text-[#31A8E0] border-[#31A8E0] hover:bg-blue-50"
             >
-              Демо бөглөх
+              {saving ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-1.5 inline" />
+                  Үүсгэж байна…
+                </>
+              ) : (
+                "Үргэлжлүүлэх"
+              )}
             </Button>
-            <div className="flex gap-2">
-              <DialogClose asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={saving}
-                >
-                  Болих
-                </Button>
-              </DialogClose>
-              <Button
-                type="button"
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white min-w-27.5"
-                onClick={() => void handleCreateShell()}
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin mr-1.5 inline" />
-                    Үүсгэж байна…
-                  </>
-                ) : (
-                  "Үргэлжлүүлэх"
-                )}
-              </Button>
-            </div>
           </div>
         )}
       </DialogContent>
