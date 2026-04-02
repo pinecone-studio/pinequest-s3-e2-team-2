@@ -223,8 +223,18 @@ export function ActiveExams() {
             Ачааллаж байна...
           </div>
         ) : activeExams.length === 0 ? (
-          <div className="text-[12px] text-[#8a9bb0] py-2">
-            Одоогоор идэвхтэй шалгалт алга байна
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[#dce8f2] bg-[#f8fbff] px-4 py-3">
+            <p className="text-[12px] text-[#8a9bb0]">
+              Одоогоор идэвхтэй шалгалт алга байна
+            </p>
+            <Link href="/exams">
+              <Button
+                size="sm"
+                className="bg-[#31A8E0] hover:bg-[#2398cc] text-white text-[12px] font-semibold rounded-lg h-8 px-3 border-0"
+              >
+                Шалгалт нэмэх
+              </Button>
+            </Link>
           </div>
         ) : (
           activeExams.map((e, idx) => {
@@ -275,7 +285,7 @@ export function ActiveExams() {
                     <p className="text-[10px] text-[#8a9bb0]">Зөрчил</p>
                   </div>
                 </div>
-                <Link href="/monitoring">
+                <Link href={`/monitoring/${e.id}`}>
                   <Button
                     size="sm"
                     className={`${btnBg} text-white text-[12px] font-semibold ml-2 whitespace-nowrap rounded-lg h-8 px-3 border-0`}

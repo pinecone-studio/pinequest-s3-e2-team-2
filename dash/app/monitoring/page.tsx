@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Monitor, Wifi } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -146,9 +147,17 @@ function formatClassName(course?: {
 }
 
 export default function MonitoringPage() {
+  const params = useParams<{ examId?: string | string[] }>();
+  const routeExamId = Array.isArray(params?.examId)
+    ? params.examId[0]
+    : params?.examId;
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [activeRoomIds, setActiveRoomIds] = useState<string[]>([]);
+  const [roomByStudentId, setRoomByStudentId] = useState<Record<string, string>>(
+    {},
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
   const [classFilter, setClassFilter] = useState("all");
@@ -170,8 +179,22 @@ export default function MonitoringPage() {
         const enrollments = monitoringData.enrollments ?? [];
         const courses = monitoringData.courses ?? [];
         const exams = monitoringData.exams ?? [];
-        const submissions = monitoringData.submissions ?? [];
-        const cheatLogs = monitoringData.cheatLogs ?? [];
+        const allSubmissions = monitoringData.submissions ?? [];
+        const allCheatLogs = monitoringData.cheatLogs ?? [];
+
+        const inProgressSubmissions = allSubmissions.filter(
+          (submission) => submission.status === "in_progress",
+        );
+        const submissions = routeExamId
+          ? inProgressSubmissions.filter(
+              (submission) => submission.exam_id === routeExamId,
+            )
+          : inProgressSubmissions;
+        const liveStudentIds = new Set(submissions.map((s) => s.student_id));
+        const cheatLogs = (routeExamId
+          ? allCheatLogs.filter((log) => log.exam_id === routeExamId)
+          : allCheatLogs
+        ).filter((log) => Boolean(log.student_id && liveStudentIds.has(log.student_id)));
 
         const courseById = new Map(
           courses.map((course) => [course.id, course]),
@@ -200,7 +223,12 @@ export default function MonitoringPage() {
           cheatLogsByStudentId.set(log.student_id, next);
         }
 
-        const nextStudents: Student[] = gqlStudents.map((student, index) => {
+        const baseStudents = gqlStudents.filter((student) =>
+          liveStudentIds.has(student.id),
+        );
+
+        const nextRoomByStudentId: Record<string, string> = {};
+        const nextStudents: Student[] = baseStudents.map((student, index) => {
           const studentSubmissions =
             submissionsByStudentId
               .get(student.id)
@@ -251,13 +279,14 @@ export default function MonitoringPage() {
               ? latestExam.questions.length
               : Math.max(answeredCount, 1);
 
-          const status =
-            latestSubmission?.status === "submitted" ||
-            latestSubmission?.status === "reviewed"
-              ? "submitted"
-              : latestSubmission?.status === "in_progress"
-                ? "online"
-                : "offline";
+          const status = latestSubmission?.status === "in_progress" ? "online" : "offline";
+          const normalizedStudentId = String(
+            Number.parseInt(student.id, 10) || index + 1,
+          );
+          if (latestSubmission?.exam_id) {
+            nextRoomByStudentId[normalizedStudentId] =
+              `exam-room-${latestSubmission.exam_id}`;
+          }
 
           return {
             id: Number.parseInt(student.id, 10) || index + 1,
@@ -274,6 +303,17 @@ export default function MonitoringPage() {
 
         if (!cancelled) {
           setStudents(nextStudents);
+          setRoomByStudentId(nextRoomByStudentId);
+          setActiveRoomIds(
+            Array.from(
+              new Set(
+                submissions
+                  .map((submission) => submission.exam_id)
+                  .filter((examId): examId is string => Boolean(examId))
+                  .map((examId) => `exam-room-${examId}`),
+              ),
+            ),
+          );
           setIsLoading(false);
         }
       } catch (error) {
@@ -284,6 +324,8 @@ export default function MonitoringPage() {
             : "Monitoring data ачаалж чадсангүй",
         );
         setStudents([]);
+        setActiveRoomIds([]);
+        setRoomByStudentId({});
         setIsLoading(false);
       }
     };
@@ -297,7 +339,7 @@ export default function MonitoringPage() {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, []);
+  }, [routeExamId]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -353,6 +395,18 @@ export default function MonitoringPage() {
     };
   }, [classFilteredStudents]);
 
+  const classFilteredRoomIds = useMemo(() => {
+    const scopedStudents =
+      classFilter === "all" ? students : classFilteredStudents;
+    return Array.from(
+      new Set(
+        scopedStudents
+          .map((student) => roomByStudentId[String(student.id)])
+          .filter((roomId): roomId is string => Boolean(roomId)),
+      ),
+    );
+  }, [classFilter, classFilteredStudents, roomByStudentId, students]);
+
   if (isLoading) {
     return <MonitoringPageSkeleton />;
   }
@@ -370,7 +424,9 @@ export default function MonitoringPage() {
             Monitoring data ачаалж чадсангүй: {loadError}
           </div>
         ) : null}
-        <LiveMonitorPanel roomId="exam-room-1" />
+        <LiveMonitorPanel
+          roomIds={classFilter === "all" ? activeRoomIds : classFilteredRoomIds}
+        />
         <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-4 p-0">
           <StatCard
             title="Нийт сурагч"
@@ -411,6 +467,11 @@ export default function MonitoringPage() {
                 <p className="mt-1 text-sm text-[var(--monitoring-muted)]">
                   Нийт {visibleStudents.length} сурагчийн илэрц
                 </p>
+                {routeExamId ? (
+                  <p className="mt-1 text-xs text-[var(--monitoring-primary)]">
+                    Шалгалтын хяналт: {routeExamId}
+                  </p>
+                ) : null}
               </div>
 
               <MonitoringFilters

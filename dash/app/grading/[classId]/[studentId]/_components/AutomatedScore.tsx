@@ -14,7 +14,7 @@ export const AutomatedScore = ({ score, total }: AutomatedScoreProps) => {
         <CircleCheckBig
           size={16}
           strokeWidth={2.5}
-          className="text-green-600"
+          className="text-[#1F9D8B]"
         />
         <h4 className="text-sm font-semibold text-gray-800">Автомат Оноо</h4>
       </div>

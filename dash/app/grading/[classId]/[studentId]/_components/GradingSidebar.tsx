@@ -59,7 +59,7 @@ export const GradingSidebar = ({
       <div className="border-t border-gray-200 p-4 bg-white flex flex-col gap-5">
         <button
           onClick={onSubmit}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition"
+          className="w-full py-3 bg-[#31A8E0] hover:bg-[#2696CB] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition"
         >
           <Send size={16} />
           Оноо Оруулах

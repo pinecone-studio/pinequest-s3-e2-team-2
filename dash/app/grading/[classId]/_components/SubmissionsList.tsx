@@ -37,7 +37,7 @@ export const SubmissionsList = ({
             className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
+              <div className="w-9 h-9 rounded-full bg-[#31A8E0]/10 text-[#31A8E0] flex items-center justify-center text-xs font-bold">
                 {student.initials}
               </div>
               <div>
@@ -64,12 +64,12 @@ export const SubmissionsList = ({
               </div>
               <div className="w-36">
                 {student.status === "Дүгнэгдсэн" ? (
-                  <span className="flex items-center justify-center gap-1 text-xs font-medium text-green-600 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
+                  <span className="flex items-center justify-center gap-1 text-xs font-medium text-[#1F9D8B] bg-[#E8F8F5] border border-[#BFEDE5] px-2.5 py-1 rounded-full">
                     <CircleCheckBig size={14} strokeWidth={2.5} />
                     Дүгнэгдсэн
                   </span>
                 ) : (
-                  <span className="flex justify-center items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
+                  <span className="flex justify-center items-center gap-1 text-xs font-medium text-[#C27A17] bg-[#FFF7E8] border border-[#F5D8A8] px-2.5 py-1 rounded-full">
                     <Clock size={14} strokeWidth={2.5} />
                     Хүлээгдэж байна
                   </span>

@@ -52,7 +52,7 @@ export const SubmissionsSearch = ({
             onClick={() => onFilterChange(tab)}
             className={`text-xs px-4 py-2 rounded-xl border font-medium transition-all ${
               activeFilter === tab
-                ? "bg-blue-500 text-white border-blue-500"
+                ? "bg-[#31A8E0] text-white border-[#31A8E0]"
                 : "bg-white text-gray-600 border-gray-200 "
             }`}
           >
