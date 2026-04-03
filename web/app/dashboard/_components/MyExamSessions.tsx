@@ -25,6 +25,7 @@ import { buildExamHref } from "@/lib/exam-navigation";
 import {
   buildDashboardExamCards,
   buildStudentUpcomingExamCards,
+  buildUpcomingExamCards,
   canStartExam,
   getExamDurationLabel,
   getExamStartAvailabilityMessage,
@@ -175,8 +176,13 @@ export function MyExamSessions({ className }: MyExamSessionsProps) {
         const studentId = response.studentByEmail?.id;
 
         if (!studentId) {
-          setExams([]);
-          setMessage("Шалгалтын мэдээллээ харахын тулд бүртгэлээ шалгана уу.");
+          const nextExams = buildUpcomingExamCards(response.courses);
+          setExams(nextExams);
+          setMessage(
+            nextExams.length === 0
+              ? "Одоогоор идэвхтэй эсвэл ойрын шалгалт алга."
+              : null,
+          );
           return;
         }
 

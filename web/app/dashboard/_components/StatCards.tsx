@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { graphqlRequest } from "@/lib/graphql";
 import {
   buildStudentUpcomingExamCards,
+  buildUpcomingExamCards,
   isExamExpired,
   type ExamCourse,
 } from "@/lib/upcoming-exams";
@@ -287,8 +288,20 @@ export function StatCards() {
         const studentId = data.studentByEmail?.id;
 
         if (!studentId) {
-          setStats(EMPTY_STATS);
-          setMessage("Одоогоор таны оюутны мэдээлэл олдсонгүй.");
+          const now = Date.now();
+          const visibleUpcomingExams = buildUpcomingExamCards(data.courses)
+            .filter((exam) => !isExamExpired(exam, now));
+          const nextExamAt =
+            visibleUpcomingExams.find(
+              (exam) => getTimestamp(exam.startsAt) > now,
+            )?.startsAt ?? null;
+
+          setStats({
+            ...EMPTY_STATS,
+            upcomingExamsCount: visibleUpcomingExams.length,
+            nextExamAt,
+          });
+          setMessage(null);
           return;
         }
 

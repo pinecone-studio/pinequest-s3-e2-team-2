@@ -145,7 +145,7 @@ export default function UpcomingExams() {
         const studentId = data.studentByEmail?.id;
 
         if (!studentId) {
-          setExams([]);
+          setExams(buildUpcomingExamCards(data.courses));
           return;
         }
 
