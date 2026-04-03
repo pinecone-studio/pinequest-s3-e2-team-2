@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Monitor, Wifi } from "lucide-react";
 
@@ -29,10 +29,12 @@ type StudentFilter = "all" | "alert";
 type ClassOption = { value: string; label: string };
 type StudentViolation = {
   id: string;
-  type: StudentAlert["type"];
-  message: string;
-  time: string;
-  severity: "warning" | "danger";
+  student_id: string | null;
+  exam_id: string | null;
+  type: string | null;
+  event: string | null;
+  severity: number | null;
+  created_at: string | null;
 };
 
 const MONITORING_QUERY = `#graphql
@@ -73,6 +75,20 @@ const MONITORING_QUERY = `#graphql
         id
       }
     }
+    cheatLogs {
+      id
+      student_id
+      exam_id
+      type
+      event
+      severity
+      created_at
+    }
+  }
+`;
+
+const CHEAT_LOGS_QUERY = `#graphql
+  query MonitoringCheatLogs {
     cheatLogs {
       id
       student_id
@@ -192,12 +208,24 @@ export default function MonitoringPage() {
   const [classFilter, setClassFilter] = useState("all");
   const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
   const [liveStudents, setLiveStudents] = useState<LiveStudentSnapshot[]>([]);
-  const [violationsByStudentId, setViolationsByStudentId] = useState<
-    Record<number, StudentViolation[]>
+  const [rawStudentIdByNumericId, setRawStudentIdByNumericId] = useState<
+    Record<number, string>
   >({});
   const [selectedCompletedStudentId, setSelectedCompletedStudentId] = useState<
     number | null
   >(null);
+  const [dialogViolations, setDialogViolations] = useState<StudentViolation[]>(
+    [],
+  );
+  const [dialogViolationsLoading, setDialogViolationsLoading] = useState(false);
+  const [dialogViolationsError, setDialogViolationsError] = useState<
+    string | null
+  >(null);
+  const rawStudentIdByNumericIdRef = useRef<Record<number, string>>({});
+
+  useEffect(() => {
+    rawStudentIdByNumericIdRef.current = rawStudentIdByNumericId;
+  }, [rawStudentIdByNumericId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -303,8 +331,7 @@ export default function MonitoringPage() {
 
         const nextRoomByStudentId: Record<string, string> = {};
         const nextCourseIdByStudentId: Record<number, string> = {};
-        const nextViolationsByStudentId: Record<number, StudentViolation[]> =
-          {};
+        const nextRawStudentIdByNumericId: Record<number, string> = {};
         const nextStudents: Student[] = baseStudents.map((student, index) => {
           const studentSubmissions = [
             ...(submissionsByStudentId.get(student.id) ?? []),
@@ -377,15 +404,7 @@ export default function MonitoringPage() {
               : undefined;
           const numericStudentId = Number.parseInt(student.id, 10) || index + 1;
           const normalizedStudentId = String(numericStudentId);
-          nextViolationsByStudentId[numericStudentId] = studentCheatLogs.map(
-            (log, logIndex) => ({
-              id: log.id ?? `${student.id}-${logIndex}`,
-              type: toStudentAlertType(log.type),
-              message: log.event ?? log.type ?? "Зөрчил илэрсэн",
-              time: new Date(log.created_at ?? Date.now()).toLocaleString(),
-              severity: (log.severity ?? 1) >= 2 ? "danger" : "warning",
-            }),
-          );
+          nextRawStudentIdByNumericId[numericStudentId] = student.id;
           const selectedCourseId =
             selectedExam?.course_id ?? enrolledCourseId ?? null;
           if (selectedCourseId) {
@@ -423,7 +442,7 @@ export default function MonitoringPage() {
           setStudents(nextStudents);
           setRoomByStudentId(nextRoomByStudentId);
           setCourseIdByStudentId(nextCourseIdByStudentId);
-          setViolationsByStudentId(nextViolationsByStudentId);
+          setRawStudentIdByNumericId(nextRawStudentIdByNumericId);
           setClassOptions(nextClassOptions);
           setActiveRoomIds(
             Array.from(scopedExamIds).map((examId) => `exam-room-${examId}`),
@@ -441,7 +460,7 @@ export default function MonitoringPage() {
         setActiveRoomIds([]);
         setRoomByStudentId({});
         setCourseIdByStudentId({});
-        setViolationsByStudentId({});
+        setRawStudentIdByNumericId({});
         setClassOptions([]);
         setIsLoading(false);
       }
@@ -516,6 +535,77 @@ export default function MonitoringPage() {
       ) ?? null
     );
   }, [selectedCompletedStudentId, visibleCompletedStudents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadDialogViolations = async () => {
+      if (selectedCompletedStudentId === null) {
+        if (!cancelled) {
+          setDialogViolations([]);
+          setDialogViolationsError(null);
+          setDialogViolationsLoading(false);
+        }
+        return;
+      }
+
+      const rawStudentId =
+        rawStudentIdByNumericIdRef.current[selectedCompletedStudentId];
+      if (!rawStudentId) {
+        if (!cancelled) {
+          setDialogViolations([]);
+          setDialogViolationsError("Сурагчийн ID олдсонгүй");
+          setDialogViolationsLoading(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setDialogViolationsLoading(true);
+        setDialogViolationsError(null);
+      }
+
+      try {
+        const data = await graphqlRequest<{ cheatLogs: GqlCheatLog[] | null }>(
+          CHEAT_LOGS_QUERY,
+        );
+        const allLogs = data.cheatLogs ?? [];
+        const filteredLogs = allLogs
+          .filter((log) => log.student_id === rawStudentId)
+          .filter((log) => (routeExamId ? log.exam_id === routeExamId : true))
+          .sort(
+            (a, b) => getTimestamp(b.created_at) - getTimestamp(a.created_at),
+          )
+          .map((log) => ({
+            id: log.id,
+            student_id: log.student_id,
+            exam_id: log.exam_id,
+            type: log.type,
+            event: log.event,
+            severity: log.severity,
+            created_at: log.created_at,
+          }));
+
+        if (!cancelled) {
+          setDialogViolations(filteredLogs);
+          setDialogViolationsLoading(false);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setDialogViolations([]);
+        setDialogViolationsError(
+          error instanceof Error
+            ? error.message
+            : "Зөрчлийн мэдээлэл ачаалж чадсангүй",
+        );
+        setDialogViolationsLoading(false);
+      }
+    };
+
+    void loadDialogViolations();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeExamId, selectedCompletedStudentId]);
 
   const visibleLiveStudents = useMemo(() => {
     return liveStudents
@@ -823,7 +913,7 @@ export default function MonitoringPage() {
           }
         }}
       >
-        <DialogContent className="border-[var(--monitoring-dark-border)] bg-white text-[var(--monitoring-dark)] sm:max-w-2xl">
+        <DialogContent className="border-[var(--monitoring-dark-border)] bg-white text-[var(--monitoring-dark)] sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Зөрчлийн дэлгэрэнгүй</DialogTitle>
             <DialogDescription className="text-[var(--monitoring-muted)]">
@@ -847,39 +937,41 @@ export default function MonitoringPage() {
                 </p>
               </div>
 
-              {(violationsByStudentId[selectedCompletedStudent.id] ?? [])
-                .length > 0 ? (
+              {dialogViolationsLoading ? (
+                <div className="rounded-lg border border-[var(--monitoring-dark-border)] p-5 text-sm text-[var(--monitoring-muted)]">
+                  Зөрчлийн мэдээлэл ачааллаж байна...
+                </div>
+              ) : dialogViolationsError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                  {dialogViolationsError}
+                </div>
+              ) : dialogViolations.length > 0 ? (
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                  {(
-                    violationsByStudentId[selectedCompletedStudent.id] ?? []
-                  ).map((violation) => (
+                  {dialogViolations.map((violation) => (
                     <div
                       key={violation.id}
                       className={`rounded-lg border p-3 ${
-                        violation.severity === "danger"
+                        (violation.severity ?? 1) >= 2
                           ? "border-red-200 bg-red-50"
                           : "border-amber-200 bg-amber-50"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-medium text-[var(--monitoring-dark)]">
-                          {violation.message}
+                          {violation.event ?? "Зөрчил илэрсэн"}
                         </p>
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            violation.severity === "danger"
+                            (violation.severity ?? 1) >= 2
                               ? "bg-red-100 text-red-700"
                               : "bg-amber-100 text-amber-700"
                           }`}
                         >
-                          {violation.severity === "danger"
+                          {(violation.severity ?? 1) >= 2
                             ? "Danger"
                             : "Warning"}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-[var(--monitoring-muted)]">
-                        Төрөл: {violation.type} | Хугацаа: {violation.time}
-                      </p>
                     </div>
                   ))}
                 </div>
